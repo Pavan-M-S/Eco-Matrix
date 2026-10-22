@@ -11,6 +11,9 @@
 - [Key Features](#-key-features)
 - [System Architecture](#-system-architecture)
 - [Tech Stack](#-tech-stack)
+- [Interactive Visual Experience](#-interactive-visual-experience)
+  - [Custom Green-Themed Cursor](#custom-green-themed-cursor)
+  - [Themed Interactive Live Background (Eco-Mesh)](#themed-interactive-live-background-eco-mesh)
 - [Repository Structure](#-repository-structure)
 - [Getting Started](#-getting-started)
 - [Configuration & Firebase Setup](#-configuration--firebase-setup)
@@ -38,7 +41,9 @@ Rapid urbanization and climate extremes subject city trees to severe environment
 - **Real-Time Telemetry Dashboard:** Live monitoring of soil moisture, ambient temperature, overall network health index, water savings, and anomaly alerts.
 - **Bi-directional Firebase Realtime Database Integration:** Dynamic live metric streaming, node state synchronization, and transaction activity logging.
 - **Node Activity & Sensor Stream:** View individual sensor nodes with battery levels, readings, locations, and health statuses (`Healthy`, `Stress`, `Critical`).
-- **Dark / Light Theme Toggle:** Adaptive theme support with persistent user preferences saved in `localStorage`.
+- **Custom Green-Themed Cursor:** Dual-layer organic cursor with a glowing emerald precision dot, a smooth interpolating follower ring (`lerp`), interactive hover expansions, text-input I-beam morphing, and click ripple pulses.
+- **Themed Interactive Live Background ("Eco-Mesh"):** Real-time HTML5 Canvas simulation rendering interconnected sensor nodes and swaying bio-spores with dynamic proximity lines, mouse sensor probing, and radial click shockwaves.
+- **Adaptive Dark / Light Themes:** Cohesive theme adaptivity across the UI, custom cursor, and background particle palettes with persistent user preferences saved in `localStorage`.
 - **Integrated Visitor Intelligence:** Built-in client and browser device detection (`detector.js`) and universal visitor telemetry logging (`tracker.js`).
 - **Inquiry & Feedback Dispatch:** Interactive contact workflow logging inquiries directly to Firebase with timestamped identifiers.
 - **Off-Grid & Resilient:** Tailored for decentralized LoRa peer-to-peer transmission, self-healing routing, and low-power hardware.
@@ -54,6 +59,8 @@ graph TD
     C -->|User Interaction & Theme| D[Client UI]
     C -->|Feedback & Inquiry| B
     E[Client Browser & Device] -->|Telemetry & Device Insights| F[Visitor Tracker]
+    G[Canvas 2D Simulation] -->|Eco-Mesh Background & Mouse Probing| C
+    H[Custom Pointer Controller] -->|Dual-layer Fluid Green Cursor| C
 ```
 
 ---
@@ -61,9 +68,9 @@ graph TD
 ## 💻 Tech Stack
 
 ### Frontend & Interface
-- **HTML5:** Semantic architecture, accessible forms, and SVG-based live specimen graphics.
-- **CSS3:** Custom properties (CSS variables), responsive flexbox and grid layouts, theme variables (`dark`/`light`), glassmorphic panels, and keyframe animations.
-- **Vanilla JavaScript (ES6+):** Pure client logic, event listeners, tabs, scroll-reveal Intersection Observers, and DOM rendering.
+- **HTML5:** Semantic architecture, accessible forms, SVG live specimen visualizer, and hardware-accelerated canvas element.
+- **CSS3:** Custom properties (CSS variables), responsive flexbox and fluid grids, frosted-glass backdrops (`backdrop-filter`), keyframe animations, and fine-pointer media queries (`@media (hover: hover) and (pointer: fine)`).
+- **Vanilla JavaScript (ES6+):** Pure client logic, modular IIFE architecture, event delegation, Canvas 2D simulation loop, `requestAnimationFrame` interpolation physics, and Firebase Realtime Database listeners.
 - **Typography & Icons:** Google Fonts (*Fraunces*, *Inter*, *Space Mono*) and Font Awesome 6.5.
 
 ### Cloud & Backend
@@ -71,13 +78,39 @@ graph TD
 
 ---
 
+## ✨ Interactive Visual Experience
+
+### Custom Green-Themed Cursor
+
+The application features a bespoke, nature-inspired cursor engineered for smooth tactile feedback:
+- **Inner Precision Dot (`.eco-cursor-dot`)**: 8px radiant emerald point (`#4ade80`) with a soft bioluminescent glow for instant, zero-latency feedback.
+- **Outer Fluid Follower Ring (`.eco-cursor-ring`)**: 36px translucent organic ring with subtle backdrop blur, smoothly interpolating behind the cursor using linear interpolation (`lerp`) at 60/120 FPS.
+- **Interactive Hover States**:
+  - **Links & Buttons (`a`, `button`, `.btn-primary`, `.theme-toggle`, `.tab-btn`)**: Expands to 52px with an intensified green aura and subtle inner glow.
+  - **Text Fields (`input[type="text"]`, `input[type="email"]`, `textarea`)**: The follower ring dissolves and the inner dot morphs into a clean 22px green vertical I-beam cursor for precise text selection.
+- **Click Ripple Wave (`.eco-cursor-ripple`)**: Clicking anywhere triggers an expanding bio-pulse ripple that radiates outward and fades smoothly.
+- **Device & Accessibility Protection**: Active only on fine-pointer devices with hover capability; touchscreens retain standard native touch interaction. Automatically respects `prefers-reduced-motion`.
+
+### Themed Interactive Live Background (Eco-Mesh)
+
+The entire viewport is backed by a responsive, GPU-friendly HTML5 Canvas simulation (`#ecoBgCanvas`):
+- **Eco-Mesh & Sensor Nodes**: Drifting particles represent autonomous soil-sensing nodes and organic swaying spores. When nodes are within 130px, delicate connecting lines form, simulating an active LoRa mesh network.
+- **Mouse Sensor Probing**: The cursor acts as an active environmental probe—nodes within 160px draw radiant dynamic connections to the cursor and gently deflect when close.
+- **Click Bio-Shockwaves**: Mouse clicks trigger an expanding radial wave on the canvas that propagates across the mesh and gently influences nearby nodes.
+- **Theme-Aware Color Palettes**:
+  - **Dark Mode**: Bioluminescent seafoam (`#4ade80`), sage bright (`#a9c799`), warm clay (`#c98a5e`), and emerald (`#34d399`).
+  - **Light Mode**: Deep forest green (`#166534`), sage moss (`#4a7344`), and clay (`#b86a3d`) with soft wireframe lines preserving text contrast.
+- **Battery & CPU Optimization**: Automatically pauses simulation execution when the browser tab is hidden (`visibilitychange`), scales particle density dynamically to viewport width, and debounces window resizing.
+
+---
+
 ## 📂 Repository Structure
 
 ```text
 Eco-Matrix/
-├── index.html          # Main application page, hero section, abstract, components & dashboard
-├── style.css           # Design tokens, color palette, responsive breakpoints, animations & themes
-├── script.js           # Core UI logic, Firebase Realtime Database listeners, interactions
+├── index.html          # Main application page, hero section, abstract, dashboard, background canvas & cursor elements
+├── style.css           # Design tokens, color palette, responsive breakpoints, custom cursor & canvas styling
+├── script.js           # Core UI logic, Firebase listeners, Eco-Mesh live background simulation & custom cursor controller
 ├── detector.js         # Comprehensive client, device, browser, and OS detection engine
 ├── tracker.js          # Universal visitor analytics, geo-location fallbacks, telemetry logger
 ├── credentials.js      # Configuration and credentials reference
