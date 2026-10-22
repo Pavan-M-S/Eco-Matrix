@@ -402,3 +402,429 @@ contactForm.addEventListener('submit', function(e) {
 });
 
 console.log('Eco Matrix loaded · theme:', currentTheme);
+
+// ============================================================
+// 5. THEMED INTERACTIVE LIVE BACKGROUND (ECO-MESH SIMULATION)
+// ============================================================
+(function initEcoLiveBackground() {
+    const canvas = document.getElementById('ecoBgCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let animationId = null;
+    let particles = [];
+    let shockwaves = [];
+    let lastTime = performance.now();
+
+    const mouse = {
+        x: -1000,
+        y: -1000,
+        active: false,
+        lastMoved: 0
+    };
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Responsive particle count based on screen size
+    function getParticleCount() {
+        const w = window.innerWidth;
+        if (w < 600) return 24;
+        if (w < 1024) return 38;
+        return 62;
+    }
+
+    // Dynamic color palettes matching active theme
+    function getThemePalette() {
+        const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+        if (isLight) {
+            return {
+                nodeColors: [
+                    'rgba(22, 101, 52, ',   // Deep forest green
+                    'rgba(74, 115, 68, ',   // Sage green
+                    'rgba(184, 106, 61, ',  // Earth clay
+                    'rgba(34, 197, 94, '    // Vivid leaf
+                ],
+                lineColor: 'rgba(45, 74, 58, ',
+                mouseLineColor: 'rgba(22, 101, 52, ',
+                lineMaxAlpha: 0.12,
+                mouseLineMaxAlpha: 0.28,
+                shockwaveColor: 'rgba(22, 101, 52, '
+            };
+        } else {
+            return {
+                nodeColors: [
+                    'rgba(74, 222, 128, ',  // Seafoam / Emerald
+                    'rgba(169, 199, 153, ', // Sage bright
+                    'rgba(219, 162, 118, ', // Clay / Warm earth
+                    'rgba(52, 211, 153, '   // Bioluminescent green
+                ],
+                lineColor: 'rgba(139, 168, 126, ',
+                mouseLineColor: 'rgba(74, 222, 128, ',
+                lineMaxAlpha: 0.16,
+                mouseLineMaxAlpha: 0.38,
+                shockwaveColor: 'rgba(74, 222, 128, '
+            };
+        }
+    }
+
+    let palette = getThemePalette();
+
+    // Listen to theme changes smoothly
+    const themeObserver = new MutationObserver(() => {
+        palette = getThemePalette();
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+    class Particle {
+        constructor() {
+            this.init(true);
+        }
+
+        init(randomizePosition = false) {
+            this.x = randomizePosition ? Math.random() * width : (Math.random() < 0.5 ? 0 : width);
+            this.y = randomizePosition ? Math.random() * height : Math.random() * height;
+            
+            const speed = prefersReducedMotion ? 0.08 : (0.2 + Math.random() * 0.4);
+            const angle = Math.random() * Math.PI * 2;
+            this.vx = Math.cos(angle) * speed;
+            this.vy = Math.sin(angle) * speed;
+
+            this.baseRadius = 1.6 + Math.random() * 2.0;
+            this.radius = this.baseRadius;
+            this.pulseSpeed = 0.015 + Math.random() * 0.02;
+            this.pulsePhase = Math.random() * Math.PI * 2;
+
+            this.isSpore = Math.random() < 0.22;
+            this.swayAmp = 0.3 + Math.random() * 0.5;
+            this.swaySpeed = 0.01 + Math.random() * 0.015;
+            this.swayPhase = Math.random() * Math.PI * 2;
+
+            const r = Math.random();
+            this.colorIdx = r < 0.45 ? 0 : (r < 0.75 ? 1 : (r < 0.9 ? 2 : 3));
+            this.alpha = 0.35 + Math.random() * 0.45;
+        }
+
+        update(time, delta) {
+            // Gentle sinusoidal sway for organic spores
+            if (this.isSpore && !prefersReducedMotion) {
+                this.x += Math.sin(time * this.swaySpeed + this.swayPhase) * this.swayAmp;
+            }
+
+            this.x += this.vx * delta;
+            this.y += this.vy * delta;
+
+            // Screen wrap around with gentle boundary padding
+            const pad = 24;
+            if (this.x < -pad) this.x = width + pad;
+            else if (this.x > width + pad) this.x = -pad;
+            if (this.y < -pad) this.y = height + pad;
+            else if (this.y > height + pad) this.y = -pad;
+
+            // Gentle breathing pulse
+            if (!prefersReducedMotion) {
+                this.radius = this.baseRadius + Math.sin(time * this.pulseSpeed + this.pulsePhase) * 0.4;
+            }
+
+            // Mouse proximity interaction (soft elastic parting)
+            if (mouse.active) {
+                const dx = this.x - mouse.x;
+                const dy = this.y - mouse.y;
+                const dist = Math.hypot(dx, dy);
+                if (dist < 75 && dist > 1) {
+                    const push = (1 - dist / 75) * 0.9;
+                    this.x += (dx / dist) * push;
+                    this.y += (dy / dist) * push;
+                }
+            }
+        }
+
+        draw(ctx) {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, Math.max(0.8, this.radius), 0, Math.PI * 2);
+            ctx.fillStyle = palette.nodeColors[this.colorIdx] + this.alpha + ')';
+            ctx.fill();
+        }
+    }
+
+    function resize() {
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+
+        const targetCount = getParticleCount();
+        while (particles.length < targetCount) {
+            particles.push(new Particle());
+        }
+        if (particles.length > targetCount) {
+            particles.length = targetCount;
+        }
+    }
+
+    let resizeTimer = null;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(resize, 100);
+    });
+
+    // Track mouse coordinates & active status
+    window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        mouse.active = true;
+        mouse.lastMoved = performance.now();
+    });
+
+    window.addEventListener('mouseleave', () => {
+        mouse.active = false;
+    });
+
+    // Radial bio-shockwave on click
+    window.addEventListener('click', (e) => {
+        if (shockwaves.length < 5) {
+            shockwaves.push({
+                x: e.clientX,
+                y: e.clientY,
+                radius: 4,
+                maxRadius: 180,
+                speed: 4.5,
+                alpha: 0.55
+            });
+        }
+    });
+
+    // Main animation loop
+    function animate(time) {
+        animationId = requestAnimationFrame(animate);
+
+        const delta = Math.min((time - lastTime) / 16.666, 2.5);
+        lastTime = time;
+
+        // Auto-sleep mouse interaction if idle for 3.5s
+        if (mouse.active && (time - mouse.lastMoved > 3500)) {
+            mouse.active = false;
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        // Update shockwaves
+        for (let i = shockwaves.length - 1; i >= 0; i--) {
+            const sw = shockwaves[i];
+            sw.radius += sw.speed * delta;
+            sw.alpha *= 0.96;
+
+            if (sw.radius >= sw.maxRadius || sw.alpha < 0.02) {
+                shockwaves.splice(i, 1);
+                continue;
+            }
+
+            ctx.beginPath();
+            ctx.arc(sw.x, sw.y, sw.radius, 0, Math.PI * 2);
+            ctx.strokeStyle = palette.shockwaveColor + sw.alpha + ')';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            // Push particles with expanding shockwave
+            for (let j = 0; j < particles.length; j++) {
+                const p = particles[j];
+                const dx = p.x - sw.x;
+                const dy = p.y - sw.y;
+                const d = Math.hypot(dx, dy);
+                if (Math.abs(d - sw.radius) < 25 && d > 1) {
+                    const force = (1 - Math.abs(d - sw.radius) / 25) * 1.5;
+                    p.x += (dx / d) * force;
+                    p.y += (dy / d) * force;
+                }
+            }
+        }
+
+        // Draw mesh connections between nearby particles (LoRa mesh network)
+        const connectDist = 130;
+        const count = particles.length;
+        for (let i = 0; i < count; i++) {
+            const p1 = particles[i];
+            p1.update(time, delta);
+            p1.draw(ctx);
+
+            for (let j = i + 1; j < count; j++) {
+                const p2 = particles[j];
+                const dx = p1.x - p2.x;
+                const dy = p1.y - p2.y;
+                const dist = Math.hypot(dx, dy);
+
+                if (dist < connectDist) {
+                    const alpha = (1 - dist / connectDist) * palette.lineMaxAlpha;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.strokeStyle = palette.lineColor + alpha + ')';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+            }
+
+            // Draw radiant connection to active mouse cursor
+            if (mouse.active) {
+                const mdx = p1.x - mouse.x;
+                const mdy = p1.y - mouse.y;
+                const mdist = Math.hypot(mdx, mdy);
+                const mouseConnectDist = 160;
+                if (mdist < mouseConnectDist) {
+                    const mAlpha = (1 - mdist / mouseConnectDist) * palette.mouseLineMaxAlpha;
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(mouse.x, mouse.y);
+                    ctx.strokeStyle = palette.mouseLineColor + mAlpha + ')';
+                    ctx.lineWidth = 1.2;
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+
+    // Save CPU/Battery by pausing animation when tab is hidden
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        } else {
+            lastTime = performance.now();
+            if (!animationId) {
+                animationId = requestAnimationFrame(animate);
+            }
+        }
+    });
+
+    resize();
+    animationId = requestAnimationFrame(animate);
+})();
+
+// ============================================================
+// 6. CUSTOM GREEN THEMED CURSOR
+// ============================================================
+(function initEcoCustomCursor() {
+    const isFinePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!isFinePointer) return; // Retain native touch interactions on touchscreens
+
+    const cursorDot = document.getElementById('ecoCursorDot');
+    const cursorRing = document.getElementById('ecoCursorRing');
+    if (!cursorDot || !cursorRing) return;
+
+    // Enable custom cursor styles on fine-pointer devices
+    document.documentElement.classList.add('custom-cursor-active');
+
+    let mouseX = -100;
+    let mouseY = -100;
+    let ringX = -100;
+    let ringY = -100;
+    let isVisible = false;
+    let rafId = null;
+
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const lerpFactor = prefersReducedMotion ? 1 : 0.18;
+
+    window.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+
+        if (!isVisible) {
+            isVisible = true;
+            cursorDot.style.opacity = '1';
+            cursorRing.style.opacity = '1';
+            ringX = mouseX;
+            ringY = mouseY;
+        }
+
+        // Instant dot positioning for zero latency
+        cursorDot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
+    });
+
+    document.addEventListener('mouseleave', () => {
+        isVisible = false;
+        cursorDot.style.opacity = '0';
+        cursorRing.style.opacity = '0';
+    });
+
+    document.addEventListener('mouseenter', () => {
+        isVisible = true;
+        cursorDot.style.opacity = '1';
+        cursorRing.style.opacity = '1';
+    });
+
+    // Smooth follower physics for the outer ring
+    function updateFollower() {
+        if (isVisible) {
+            ringX += (mouseX - ringX) * lerpFactor;
+            ringY += (mouseY - ringY) * lerpFactor;
+            cursorRing.style.transform = `translate(${ringX}px, ${ringY}px)`;
+        }
+        rafId = requestAnimationFrame(updateFollower);
+    }
+    rafId = requestAnimationFrame(updateFollower);
+
+    // Interactive element hover detection via event delegation
+    const INTERACTIVE_SELECTORS = 'a, button, input[type="submit"], input[type="button"], .btn-primary, .btn-secondary, .theme-toggle, .tab-btn, .dropdown > a, .faq-question, [role="button"], .nav-hamburger, .nav-cta, .dash-panel, .specimen';
+    const TEXT_INPUT_SELECTORS = 'input[type="text"], input[type="email"], textarea';
+
+    document.addEventListener('mouseover', (e) => {
+        const target = e.target;
+        if (!target) return;
+
+        if (target.closest(TEXT_INPUT_SELECTORS)) {
+            cursorRing.classList.add('cursor-text');
+            cursorDot.classList.add('cursor-text');
+            cursorRing.classList.remove('cursor-hover');
+            cursorDot.classList.remove('cursor-hover');
+        } else if (target.closest(INTERACTIVE_SELECTORS)) {
+            cursorRing.classList.add('cursor-hover');
+            cursorDot.classList.add('cursor-hover');
+            cursorRing.classList.remove('cursor-text');
+            cursorDot.classList.remove('cursor-text');
+        }
+    });
+
+    document.addEventListener('mouseout', (e) => {
+        const target = e.target;
+        if (!target) return;
+
+        if (target.closest(TEXT_INPUT_SELECTORS)) {
+            cursorRing.classList.remove('cursor-text');
+            cursorDot.classList.remove('cursor-text');
+        }
+        if (target.closest(INTERACTIVE_SELECTORS)) {
+            cursorRing.classList.remove('cursor-hover');
+            cursorDot.classList.remove('cursor-hover');
+        }
+    });
+
+    // Mousedown / Click Ripple effect
+    document.addEventListener('mousedown', (e) => {
+        cursorRing.classList.add('cursor-click');
+
+        // Create momentary ripple element
+        const ripple = document.createElement('div');
+        ripple.className = 'eco-cursor-ripple';
+        ripple.style.left = e.clientX + 'px';
+        ripple.style.top = e.clientY + 'px';
+        document.body.appendChild(ripple);
+
+        setTimeout(() => {
+            ripple.remove();
+        }, 550);
+    });
+
+    document.addEventListener('mouseup', () => {
+        cursorRing.classList.remove('cursor-click');
+    });
+})();

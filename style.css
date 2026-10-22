@@ -25,7 +25,7 @@
     --border: var(--hairline);
     --shadow-color: rgba(0, 0, 0, 0.5);
     --nav-bg: var(--nav-bg);
-    --section-alt: var(--moss-900);
+    --section-alt: rgba(21, 32, 26, 0.82);
     --input-bg: var(--moss-950);
     --input-border: var(--hairline-strong);
     --faq-border: var(--hairline);
@@ -72,7 +72,7 @@
     --border: var(--hairline);
     --shadow-color: rgba(0, 0, 0, 0.08);
     --nav-bg: var(--nav-bg);
-    --section-alt: var(--moss-900);
+    --section-alt: rgba(233, 229, 214, 0.82);
     --input-bg: rgba(255, 255, 255, 0.7);
     --input-border: var(--hairline-strong);
     --faq-border: var(--hairline);
@@ -543,6 +543,11 @@ nav {
 }
 
 /* ----- SECTIONS (shared) ----- */
+section, .hero, .stats-strip, footer {
+    position: relative;
+    z-index: 1;
+}
+
 section {
     padding: 4.5rem 5%;
 }
@@ -575,6 +580,8 @@ section {
 
 .section-alt {
     background: var(--section-alt);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     transition: background 0.4s ease;
 }
 
@@ -1515,5 +1522,176 @@ footer {
     }
     .specimen-readout {
         grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================
+   INTERACTIVE LIVE BACKGROUND CANVAS (ECO-MESH)
+   ============================================================ */
+.eco-bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+/* ============================================================
+   CUSTOM GREEN THEMED CURSOR
+   ============================================================ */
+/* Only activated on pointer devices supporting fine hover */
+@media (hover: hover) and (pointer: fine) {
+    html.custom-cursor-active,
+    html.custom-cursor-active * {
+        cursor: none !important;
+    }
+
+    .eco-cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #4ade80;
+        box-shadow: 0 0 10px rgba(74, 222, 128, 0.95), 0 0 20px rgba(52, 211, 153, 0.5);
+        pointer-events: none;
+        z-index: 999999;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.25s ease, width 0.2s cubic-bezier(0.16, 1, 0.3, 1), height 0.2s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease, border-radius 0.2s ease;
+        will-change: transform;
+    }
+
+    .eco-cursor-ring {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: 1.5px solid rgba(74, 222, 128, 0.65);
+        background: rgba(74, 222, 128, 0.05);
+        box-shadow: 0 0 14px rgba(74, 222, 128, 0.25);
+        pointer-events: none;
+        z-index: 999998;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        transition: opacity 0.25s ease, width 0.3s cubic-bezier(0.16, 1, 0.3, 1), height 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease;
+        will-change: transform, width, height;
+    }
+
+    /* Hover State on Links, Buttons, Clickable items */
+    .eco-cursor-ring.cursor-hover {
+        width: 52px;
+        height: 52px;
+        border-color: rgba(74, 222, 128, 0.95);
+        background: rgba(74, 222, 128, 0.15);
+        box-shadow: 0 0 22px rgba(74, 222, 128, 0.45), inset 0 0 10px rgba(74, 222, 128, 0.2);
+    }
+
+    .eco-cursor-dot.cursor-hover {
+        transform: translate(-50%, -50%) scale(1.35);
+        background: #86efac;
+        box-shadow: 0 0 14px rgba(134, 239, 172, 1);
+    }
+
+    /* Text Input Hover State */
+    .eco-cursor-ring.cursor-text {
+        opacity: 0 !important;
+        transform: translate(-50%, -50%) scale(0.4);
+    }
+
+    .eco-cursor-dot.cursor-text {
+        width: 2px;
+        height: 22px;
+        border-radius: 1px;
+        background: #4ade80;
+        box-shadow: 0 0 8px rgba(74, 222, 128, 0.9);
+    }
+
+    /* Click Active State */
+    .eco-cursor-ring.cursor-click {
+        transform: translate(-50%, -50%) scale(0.78);
+        border-color: #86efac;
+        background: rgba(134, 239, 172, 0.25);
+    }
+
+    /* Click Ripple Wave */
+    .eco-cursor-ripple {
+        position: fixed;
+        pointer-events: none;
+        z-index: 999997;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        border: 1.5px solid #4ade80;
+        animation: ecoCursorRipple 0.52s cubic-bezier(0.12, 0.8, 0.32, 1) forwards;
+    }
+
+    @keyframes ecoCursorRipple {
+        0% {
+            width: 8px;
+            height: 8px;
+            opacity: 0.95;
+            box-shadow: 0 0 12px rgba(74, 222, 128, 0.8);
+        }
+        100% {
+            width: 62px;
+            height: 62px;
+            opacity: 0;
+            box-shadow: 0 0 24px rgba(74, 222, 128, 0);
+        }
+    }
+
+    /* Light Theme Adaptive Colors */
+    [data-theme="light"] .eco-cursor-dot {
+        background: #166534;
+        box-shadow: 0 0 8px rgba(22, 101, 52, 0.7);
+    }
+
+    [data-theme="light"] .eco-cursor-ring {
+        border-color: rgba(22, 101, 52, 0.65);
+        background: rgba(22, 101, 52, 0.05);
+        box-shadow: 0 0 12px rgba(22, 101, 52, 0.2);
+    }
+
+    [data-theme="light"] .eco-cursor-ring.cursor-hover {
+        border-color: rgba(22, 101, 52, 0.95);
+        background: rgba(34, 197, 94, 0.16);
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.35);
+    }
+
+    [data-theme="light"] .eco-cursor-dot.cursor-hover {
+        background: #15803d;
+        box-shadow: 0 0 12px rgba(21, 128, 61, 0.8);
+    }
+
+    [data-theme="light"] .eco-cursor-dot.cursor-text {
+        background: #166534;
+        box-shadow: 0 0 8px rgba(22, 101, 52, 0.8);
+    }
+
+    [data-theme="light"] .eco-cursor-ripple {
+        border-color: #166534;
+        animation-name: ecoCursorRippleLight;
+    }
+
+    @keyframes ecoCursorRippleLight {
+        0% {
+            width: 8px;
+            height: 8px;
+            opacity: 0.9;
+            box-shadow: 0 0 10px rgba(22, 101, 52, 0.6);
+        }
+        100% {
+            width: 62px;
+            height: 62px;
+            opacity: 0;
+            box-shadow: 0 0 20px rgba(22, 101, 52, 0);
+        }
     }
 }
